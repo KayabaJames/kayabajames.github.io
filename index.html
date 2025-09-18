@@ -2,37 +2,79 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <title>碎紙機倒數計時</title>
+    <title>點名網站</title>
     <style>
+        /* 自定義字型 */
+        @font-face {
+            font-family: 'SAOUITT-Regular';
+            src: url('./sao-ui/SAOUITT-Regular.ttf') format('truetype');
+        }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body, html {
+        :root{
+            --bg1: #ffffff;   /* 預設頂部色（白） */
+            --bg2: #add8e6;   /* 預設底部色（淺藍） */
+        }
+        /* 把 HTML/BODY 還原成一般布局，不要當 flex */
+        html, body {
+            margin: 0; padding: 0;
             height: 100%;
+            /* 避免生成的三角形超出邊界時，出現很醜的捲動條 */
+            overflow: hidden;
+            /* 白到淺藍漸層背景（顏色由 JS 更新 CSS 變數） */
+            background: linear-gradient(to bottom, var(--bg1), var(--bg2));
+            transition: background 300ms linear;
+        }
+        /* 新增一個 container 拿來排內容 */
+        .content-wrapper {
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            font-family: sans-serif;
-            background: #f0f0f0;
+            height: 100%;
+            /* 建立定位參考 */
+            position: relative;
+            /* 內容層級最高 */
+            z-index: 2;
+            font-family: 'SAOUITT-Regular';
+        }
+        /* 專門一個 fixed 容器只放三角形 */
+        #triangle-container {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 1;   /* 在內容後面、背景前面 */
         }
         h1 {
-            font-size: 3rem;
-            margin-bottom: 1rem;
+            font-size: 4rem;
+            margin-bottom: 2rem;
             text-align: center;
+        }
+        h2 {
+            font-size: 3.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            display: none;
         }
         #timer {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
             text-align: center;
+            display: none;
         }
         #shredImage {
-            max-width: 80%;
+            max-width: 15%;
             display: none;
             margin-bottom: 1rem;
         }
         .buttons {
             width: 100%;
             display: flex;
-            justify-content: space-around;
+            /* 按鈕群組水平置中 */
+            justify-content: center;
+            /* 按鈕之間保持至少 50px 間隔 */
+            gap: 50px;
             max-width: 400px;
         }
         button {
@@ -54,62 +96,252 @@
         .shred {
             animation: shredAnim 2s steps(20) forwards;
         }
+
+        /* 三角形飄浮動畫 */
+        /*
+        當我們對 width:0、height:0 的元素同時設定 border-image，瀏覽器會把漸層當作「整個邊框」去畫（包含上下左右四邊），而不是只有我們想要的底邊。
+        由於元素本身是個 0×0 的方框，漸層邊框便被渲染成一個小正方形，遮掉了純 border-bottom 所形成的三角形輪廓。
+        若要同時保留漸層邊線和三角形形狀，就需要改用 clip-path 或是雙層元素（外層畫漸層邊框、內層 clip 成三角）才行。
+        */
+        @keyframes floatUp {
+            from { bottom: 0; opacity: 1; }
+            to   { bottom: 50vh; opacity: 0; }
+        }
+        @keyframes spin {
+        from { transform: rotate(0deg); }
+        to   { transform: rotate(360deg); }
+        }
+        .triangle {
+            position: fixed;
+            bottom: 0;
+            /* 三角形寬高 = 2 × --tri-size */
+            width: calc(var(--tri-size) * 2);
+            height: calc(var(--tri-size) * 2);
+            /* 裁切成三角形 */
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            /* 漸層邊框 + 實心填色 */
+            background-image:
+                linear-gradient(to bottom, rgba(200,200,200,0.5), rgba(150,150,150,0.5)),
+                linear-gradient(#00bfff, #00bfff);
+            background-origin: border-box, padding-box;
+            background-clip: border-box, padding-box;
+            background-repeat: no-repeat;
+            border: 2px solid transparent;
+            pointer-events: none;
+            z-index: 1;  /* 置於背景之上、內容之下 */
+            transform-origin: 50% 50%;
+            /* 同時播放上浮與旋轉 */
+            /* 
+            原先 floatUp 動畫和 spin 都修改 transform 屬性，後者蓋掉了前者，導致只有旋轉而無上下位移。
+            改用 bottom 動畫後，兩者不再衝突，三角形就會同時上浮並旋轉。 
+            */
+            animation:
+                floatUp 4s linear forwards,
+                spin var(--spin-duration) linear infinite var(--spin-dir);
+        }
     </style>
 </head>
 <body>
-    <h1>Text</h1>
-    <div id="timer">15:00</div>
-    <img id="shredImage" src="test.png" alt="要隱藏的圖片">
-    <div class="buttons">
-        <button id="startBtn">開始倒數計時</button>
-        <button id="resetBtn">重設倒數計時</button>
+    <!-- 先放三角形的 fixed 容器 -->
+    <div id="triangle-container"></div>
+    
+    <!-- 再放真正用 flex 居中的內容 -->
+    <div class="content-wrapper">
+        <h1>Zuvio  點名時間</h1>
+        <h2>Time Left :</h2>
+        <div id="timer">00:30</div>
+        <img id="shredImage" src="zuvio.png" alt="請使用Zuvio校園簽到！">
+        <div class="buttons">
+        <button id="startBtn">開始</button>
+        <button id="resetBtn">重設</button>
+        </div>
     </div>
 
     <script>
         const startBtn = document.getElementById('startBtn')
         const resetBtn = document.getElementById('resetBtn')
-        const timerEl = document.getElementById('timer')
-        const img = document.getElementById('shredImage')
+        const h2El     = document.querySelector('h2')
+        const timerEl  = document.getElementById('timer')
+        const img      = document.getElementById('shredImage')
 
-        let totalSeconds = 15 * 60
-        let intervalId = null
+        // 初始總秒數（改成 15*60 可設為 15 分鐘）
+        const INITIAL_TOTAL_SECONDS = 1 * 30
+        let animationId = null
+        let flyAnimId = null
+        let endTime = null
+        let lastDisplayedSeconds = null
+
+        // 顏色設定
+        const whiteHex = "#FFFFFF" // 白色
+        const lightBlueHex = "#ADD8E6" // 淺藍色
+        const TopHex = "#FDFA72"    // 漸變到靠近結束時的頂部淺黃色
+        const BottomHex = "#FFA500" // 漸變到靠近結束時的底部橘色
+
+        function hexToRgb(hex){
+            const h = hex.replace('#','')
+            return [
+                parseInt(h.substr(0,2),16),
+                parseInt(h.substr(2,2),16),
+                parseInt(h.substr(4,2),16)
+            ]
+        }
+        function rgbToHex(r,g,b){
+            const toHex = v => v.toString(16).padStart(2,'0')
+            return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+        }
+        function mixHex(a,b,t){
+            const ra = hexToRgb(a), rb = hexToRgb(b)
+            const r = Math.round(ra[0] + (rb[0]-ra[0])*t)
+            const g = Math.round(ra[1] + (rb[1]-ra[1])*t)
+            const bl = Math.round(ra[2] + (rb[2]-ra[2])*t)
+            return rgbToHex(r,g,bl)
+        }
 
         function formatTime(sec) {
             const m = Math.floor(sec / 60).toString().padStart(2, '0')
-            const s = (sec % 60).toString().padStart(2, '0')
+            const s = (Math.floor(sec) % 60).toString().padStart(2, '0')
             return `${m}:${s}`
         }
 
-        function updateTimer() {
-            timerEl.textContent = formatTime(totalSeconds)
-            if (totalSeconds <= 0) {
-                clearInterval(intervalId)
-                img.classList.add('shred')
+        // 連續、流暢的動畫迴圈
+        function tick(now) {
+            if (!endTime) return
+            // 秒（可帶小數）
+            const remaining = Math.max(0, (endTime - now) / 1000)
+            // progress 表示「接近結束的比例」：0 = 剛開始，1 = 完全結束
+            let progress = 1 - (remaining / INITIAL_TOTAL_SECONDS)
+            progress = Math.min(Math.max(progress, 0), 1)
+            const eased = Math.pow(progress, 1.6)
+
+            const topColor = mixHex(whiteHex, TopHex, eased)
+            const bottomColor = mixHex(lightBlueHex, BottomHex, eased)
+
+            document.documentElement.style.setProperty('--bg1', topColor)
+            document.documentElement.style.setProperty('--bg2', bottomColor)
+
+            const displaySeconds = Math.max(0, Math.floor(remaining))
+            if (displaySeconds !== lastDisplayedSeconds) {
+                timerEl.textContent = formatTime(displaySeconds)
+                lastDisplayedSeconds = displaySeconds
             }
-            totalSeconds--
+
+            // 倒數剩餘 <=25% 時，文字顏色從黑漸變到紅，到剩 10% 完全紅
+            const remRatio = remaining / INITIAL_TOTAL_SECONDS
+            if (remRatio <= 0.25) {
+                const tColor = Math.min((0.25 - remRatio) / (0.25 - 0.10), 1)
+                const mixedColor = mixHex('#000000', '#ff0000', tColor)
+                timerEl.style.color = mixedColor
+            } else {
+                timerEl.style.color = ''  // 恢復預設色（可改為 '#000000'）
+            }
+
+            if (remaining <= 0) {
+                // 結束：顯示碎紙效果，並把背景鎖為血紅
+                document.documentElement.style.setProperty('--bg1', TopHex)
+                document.documentElement.style.setProperty('--bg2', BottomHex)
+                img.classList.add('shred')
+                cancelAnimationFrame(animationId)
+                animationId = null
+                endTime = null
+                return
+            }
+
+            animationId = requestAnimationFrame(tick)
         }
 
         startBtn.addEventListener('click', () => {
-            if (intervalId) return
+            if (animationId || flyAnimId) return
+            h2El.style.display    = 'block'
+            timerEl.style.display = 'block'
             img.style.display = 'block'
             img.classList.remove('shred')
-            totalSeconds = 15 * 60
-            timerEl.textContent = formatTime(totalSeconds)
-            intervalId = setInterval(updateTimer, 1000)
+
+            // 初始化倒數計時器飛越增加特效
+            let startTime = null
+            const flyDuration = 2000
+            function fly(now) {
+                if (!startTime) startTime = now
+                const elapsed = now - startTime
+                const t = Math.min(elapsed / flyDuration, 1)
+                const current = Math.floor(t * INITIAL_TOTAL_SECONDS)
+                timerEl.textContent = formatTime(current)
+
+                if (t < 1) {
+                    flyAnimId = requestAnimationFrame(fly)
+                } else {
+                    // 飛躍結束，啟動真正倒數
+                    flyAnimId = null
+                    // 設定結束時間（使用 performance.now 的高精度時間）
+                    endTime = performance.now() + INITIAL_TOTAL_SECONDS * 1000
+                    lastDisplayedSeconds = null
+                    // 立刻執行一次以避免延遲
+                    animationId = requestAnimationFrame(tick)
+                }
+            }
+            flyAnimId = requestAnimationFrame(fly)
+            
+            // 開始時重設文字顏色
+            timerEl.style.color = ''
+            animationId = requestAnimationFrame(tick)
         })
 
         resetBtn.addEventListener('click', () => {
-            clearInterval(intervalId)
-            intervalId = null
-            totalSeconds = 15 * 60
-            timerEl.textContent = formatTime(totalSeconds)
+            if (animationId) {
+                cancelAnimationFrame(animationId)
+                animationId = null
+            }
+            // 取消飛躍效果
+            if (flyAnimId) {
+                cancelAnimationFrame(flyAnimId)
+                flyAnimId = null
+            }
+            endTime = null
+            lastDisplayedSeconds = null
+            timerEl.textContent = formatTime(INITIAL_TOTAL_SECONDS)
+            h2El.style.display    = 'none'
+            timerEl.style.display = 'none'
             img.style.display = 'none'
             img.classList.remove('shred')
+            // 回復原始漸層顏色
+            document.documentElement.style.setProperty('--bg1', whiteHex)
+            document.documentElement.style.setProperty('--bg2', lightBlueHex)
+
+            // 開始時重設文字顏色
+            timerEl.style.color = ''
         })
 
         img.addEventListener('animationend', () => {
             img.style.display = 'none'
         })
+
+        // 頁面載入時初始化背景與顯示時間
+        document.documentElement.style.setProperty('--bg1', whiteHex)
+        document.documentElement.style.setProperty('--bg2', lightBlueHex)
+        timerEl.textContent = formatTime(INITIAL_TOTAL_SECONDS)
+    
+        const triContainer = document.getElementById('triangle-container');
+        // 隨機生成三角形並飄浮消失
+        const triangleInterval = setInterval(() => {
+            const tri = document.createElement('div');
+            // 10px 到 30px
+            const size = Math.random() * 20 + 10;
+            tri.classList.add('triangle');
+            tri.style.setProperty('--tri-size', `${size}px`);
+            // 隨機角速度 1~3s／圈，隨機方向順時鐘或逆時鐘
+            tri.style.setProperty('--spin-duration', `${Math.random() * 2 + 1}s`);
+            tri.style.setProperty('--spin-dir', Math.random() < 0.5 ? 'normal' : 'reverse');
+            // 以像素為單位，隨機分布於整個視窗寬度
+            const triWidth = size * 2 + 4;
+            const maxX = window.innerWidth - triWidth;
+            const x = Math.random() * maxX;
+            tri.style.left = `${x}px`;
+            /*
+            原本把小三角加入 document.body，但我們已經建立了 #triangle-container 作為「fixed 三角形層」，
+            三角形必須 append 到它才能顯示出來。
+            */
+            triContainer.appendChild(tri);
+            tri.addEventListener('animationend', () => tri.remove());
+        }, 1000 / 20); // 每約50毫秒執行一次，換算下來約可產生20個三角形／秒。
     </script>
 </body>
 </html>
