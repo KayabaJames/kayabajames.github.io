@@ -1,146 +1,115 @@
 <!DOCTYPE html>
-<html>
-  <head>
+<html lang="zh-Hant">
+<head>
     <meta charset="UTF-8">
-    <title>倒數計時網站</title>
+    <title>碎紙機倒數計時</title>
     <style>
-      /* 全版置中 */
-      body, html {
-        height: 100%;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        font-family: sans-serif;
-      }
-      h1 {
-        font-size: 3em;
-        margin-bottom: 20px;
-      }
-      #countdown {
-        font-size: 2em;
-        margin-bottom: 20px;
-      }
-      #image-container {
-        position: relative;
-        display: none;
-      }
-      #image-container img {
-        max-width: 100%;
-        display: block;
-      }
-      .slice {
-        position: absolute;
-        left: 0;
-        width: 100%;
-        overflow: hidden;
-      }
-      .slice img {
-        display: block;
-      }
-      @keyframes shred {
-        0% { 
-          transform: translateY(0); 
-          opacity: 1;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: sans-serif;
+            background: #f0f0f0;
         }
-        100% { 
-          transform: translateY(100px); 
-          opacity: 0;
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-align: center;
         }
-      }
+        #timer {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        #shredImage {
+            max-width: 80%;
+            display: none;
+            margin-bottom: 1rem;
+        }
+        .buttons {
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            max-width: 400px;
+        }
+        button {
+            padding: .5rem 1rem;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        /* 碎紙機效果 */
+        @keyframes shredAnim {
+            0% {
+                clip-path: inset(0% 0 0 0);
+                opacity: 1;
+            }
+            100% {
+                clip-path: inset(100% 0 0 0);
+                opacity: 0;
+            }
+        }
+        .shred {
+            animation: shredAnim 2s steps(20) forwards;
+        }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <h1>Text</h1>
-    <div id="countdown">等待11:00</div>
-    <div id="image-container">
-      <img id="main-image" src="image.png" alt="圖片">
+    <div id="timer">15:00</div>
+    <img id="shredImage" src="your-image.png" alt="要隱藏的圖片">
+    <div class="buttons">
+        <button id="startBtn">開始倒數計時</button>
+        <button id="resetBtn">重設倒數計時</button>
     </div>
 
     <script>
-      (function(){
-        // 設定倒數時間（15分鐘）與圖片分割的區塊數
-        const COUNTDOWN_DURATION = 15 * 60;  // 15分鐘倒數（秒）
-        const SLICE_COUNT = 10;
-        let countdownInterval = null;
-        let activeCountdown = false;
+        const startBtn = document.getElementById('startBtn')
+        const resetBtn = document.getElementById('resetBtn')
+        const timerEl = document.getElementById('timer')
+        const img = document.getElementById('shredImage')
 
-        const countdownElem = document.getElementById('countdown');
-        const imageContainer = document.getElementById('image-container');
-        const mainImage = document.getElementById('main-image');
+        let totalSeconds = 15 * 60
+        let intervalId = null
 
-        function updateCountdown() {
-          const now = new Date();
-          // 今天 11:00 與 11:15 (以台灣時間為基礎，假設使用者時區即為台灣)
-          let noon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 27, 0);
-          let countdownEndTime = new Date(noon.getTime() + COUNTDOWN_DURATION * 1000);
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60).toString().padStart(2, '0')
+            const s = (sec % 60).toString().padStart(2, '0')
+            return `${m}:${s}`
+        }
 
-          // 如果現在早於 11:00，則等待
-          if(now < noon) {
-            activeCountdown = false;
-            countdownElem.textContent = "等待11:00";
-            imageContainer.style.display = "none";
-            return;
-          }
-          // 如果現在超過 11:15，倒數已結束
-          if(now >= countdownEndTime) {
-            if(activeCountdown) {
-              // 執行碎紙機效果
-              startShredEffect();
-              activeCountdown = false;
+        function updateTimer() {
+            timerEl.textContent = formatTime(totalSeconds)
+            if (totalSeconds <= 0) {
+                clearInterval(intervalId)
+                img.classList.add('shred')
             }
-            countdownElem.textContent = "倒數結束";
-            return;
-          }
-          // 在倒數期間
-          activeCountdown = true;
-          // 顯示圖片
-          imageContainer.style.display = "block";
-          let remaining = Math.floor((countdownEndTime - now) / 1000);
-          let minutes = Math.floor(remaining / 60);
-          let seconds = remaining % 60;
-          countdownElem.textContent = 
-            (minutes < 10 ? "0" + minutes : minutes) + ":" + 
-            (seconds < 10 ? "0" + seconds : seconds);
+            totalSeconds--
         }
 
-        // 將圖片分割成多個水平區塊並開始淡出動畫
-        function startShredEffect() {
-          // 只執行一次
-          if(document.querySelectorAll('.slice').length > 0) return;
-          const sliceHeight = mainImage.clientHeight / SLICE_COUNT;
-          // 隱藏原本圖片
-          mainImage.style.visibility = 'hidden';
-          // 產生每個區塊
-          for(let i = 0; i < SLICE_COUNT; i++) {
-            let slice = document.createElement('div');
-            slice.className = 'slice';
-            slice.style.top = (i * sliceHeight) + 'px';
-            slice.style.height = sliceHeight + 'px';
-            // 設定背景為原圖片的呈現
-            slice.style.background = `url(${mainImage.src})`;
-            slice.style.backgroundPosition = `0px -${i * sliceHeight}px`;
-            slice.style.backgroundSize = `100% ${mainImage.clientHeight}px`;
-            imageContainer.appendChild(slice);
-            // 延遲動畫以營造由上往下的順序效果
-            slice.style.animation = `shred 1s ease forwards`;
-            slice.style.animationDelay = (i * 0.1) + 's';
-          }
-          // 全部動畫完成後，將圖片容器隱藏
-          setTimeout(() => {
-            imageContainer.style.display = "none";
-            // 清除 slice 元素，以免累積
-            document.querySelectorAll('.slice').forEach(e => e.remove());
-            // 也將原始圖片恢復可見狀態，待下一次倒數時使用
-            mainImage.style.visibility = 'visible';
-          }, SLICE_COUNT * 100 + 1200);
-        }
+        startBtn.addEventListener('click', () => {
+            if (intervalId) return
+            img.style.display = 'block'
+            img.classList.remove('shred')
+            totalSeconds = 15 * 60
+            timerEl.textContent = formatTime(totalSeconds)
+            intervalId = setInterval(updateTimer, 1000)
+        })
 
-        // 每秒更新一次倒數
-        countdownInterval = setInterval(updateCountdown, 1000);
-        updateCountdown();  // 初始化檢查
-      })();
+        resetBtn.addEventListener('click', () => {
+            clearInterval(intervalId)
+            intervalId = null
+            totalSeconds = 15 * 60
+            timerEl.textContent = formatTime(totalSeconds)
+            img.style.display = 'none'
+            img.classList.remove('shred')
+        })
+
+        img.addEventListener('animationend', () => {
+            img.style.display = 'none'
+        })
     </script>
-  </body>
+</body>
 </html>
