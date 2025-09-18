@@ -73,7 +73,7 @@
         function updateCountdown() {
           const now = new Date();
           // 今天 11:00 與 11:15 (以台灣時間為基礎，假設使用者時區即為台灣)
-          let noon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 11, 0, 0);
+          let noon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 27, 0);
           let countdownEndTime = new Date(noon.getTime() + COUNTDOWN_DURATION * 1000);
 
           // 如果現在早於 11:00，則等待
