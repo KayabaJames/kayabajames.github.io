@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>倒數計時網站</title>
+    <style>
+      /* 全版置中 */
+      body, html {
+        height: 100%;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-family: sans-serif;
+      }
+      h1 {
+        font-size: 3em;
+        margin-bottom: 20px;
+      }
+      #countdown {
+        font-size: 2em;
+        margin-bottom: 20px;
+      }
+      #image-container {
+        position: relative;
+        display: none;
+      }
+      #image-container img {
+        max-width: 100%;
+        display: block;
+      }
+      .slice {
+        position: absolute;
+        left: 0;
+        width: 100%;
+        overflow: hidden;
+      }
+      .slice img {
+        display: block;
+      }
+      @keyframes shred {
+        0% { 
+          transform: translateY(0); 
+          opacity: 1;
+        }
+        100% { 
+          transform: translateY(100px); 
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Text</h1>
+    <div id="countdown">等待11:00</div>
+    <div id="image-container">
+      <img id="main-image" src="image.png" alt="圖片">
+    </div>
+
+    <script>
+      (function(){
+        // 設定倒數時間（15分鐘）與圖片分割的區塊數
+        const COUNTDOWN_DURATION = 15 * 60;  // 15分鐘倒數（秒）
+        const SLICE_COUNT = 10;
+        let countdownInterval = null;
+        let activeCountdown = false;
+
+        const countdownElem = document.getElementById('countdown');
+        const imageContainer = document.getElementById('image-container');
+        const mainImage = document.getElementById('main-image');
+
+        function updateCountdown() {
+          const now = new Date();
+          // 今天 11:00 與 11:15 (以台灣時間為基礎，假設使用者時區即為台灣)
+          let noon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 11, 0, 0);
+          let countdownEndTime = new Date(noon.getTime() + COUNTDOWN_DURATION * 1000);
+
+          // 如果現在早於 11:00，則等待
+          if(now < noon) {
+            activeCountdown = false;
+            countdownElem.textContent = "等待11:00";
+            imageContainer.style.display = "none";
+            return;
+          }
+          // 如果現在超過 11:15，倒數已結束
+          if(now >= countdownEndTime) {
+            if(activeCountdown) {
+              // 執行碎紙機效果
+              startShredEffect();
+              activeCountdown = false;
+            }
+            countdownElem.textContent = "倒數結束";
+            return;
+          }
+          // 在倒數期間
+          activeCountdown = true;
+          // 顯示圖片
+          imageContainer.style.display = "block";
+          let remaining = Math.floor((countdownEndTime - now) / 1000);
+          let minutes = Math.floor(remaining / 60);
+          let seconds = remaining % 60;
+          countdownElem.textContent = 
+            (minutes < 10 ? "0" + minutes : minutes) + ":" + 
+            (seconds < 10 ? "0" + seconds : seconds);
+        }
+
+        // 將圖片分割成多個水平區塊並開始淡出動畫
+        function startShredEffect() {
+          // 只執行一次
+          if(document.querySelectorAll('.slice').length > 0) return;
+          const sliceHeight = mainImage.clientHeight / SLICE_COUNT;
+          // 隱藏原本圖片
+          mainImage.style.visibility = 'hidden';
+          // 產生每個區塊
+          for(let i = 0; i < SLICE_COUNT; i++) {
+            let slice = document.createElement('div');
+            slice.className = 'slice';
+            slice.style.top = (i * sliceHeight) + 'px';
+            slice.style.height = sliceHeight + 'px';
+            // 設定背景為原圖片的呈現
+            slice.style.background = `url(${mainImage.src})`;
+            slice.style.backgroundPosition = `0px -${i * sliceHeight}px`;
+            slice.style.backgroundSize = `100% ${mainImage.clientHeight}px`;
+            imageContainer.appendChild(slice);
+            // 延遲動畫以營造由上往下的順序效果
+            slice.style.animation = `shred 1s ease forwards`;
+            slice.style.animationDelay = (i * 0.1) + 's';
+          }
+          // 全部動畫完成後，將圖片容器隱藏
+          setTimeout(() => {
+            imageContainer.style.display = "none";
+            // 清除 slice 元素，以免累積
+            document.querySelectorAll('.slice').forEach(e => e.remove());
+            // 也將原始圖片恢復可見狀態，待下一次倒數時使用
+            mainImage.style.visibility = 'visible';
+          }, SLICE_COUNT * 100 + 1200);
+        }
+
+        // 每秒更新一次倒數
+        countdownInterval = setInterval(updateCountdown, 1000);
+        updateCountdown();  // 初始化檢查
+      })();
+    </script>
+  </body>
+</html>
