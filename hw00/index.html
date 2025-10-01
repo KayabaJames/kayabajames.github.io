@@ -106,6 +106,79 @@
   .bottomrow {
     margin-bottom: 36px;
   }  
+
+  /* 自定義字型（新增） */
+  @font-face {
+    font-family: 'SAOUITT-Regular';
+    src: url('./sao-ui/SAOUITT-Regular.ttf') format('truetype');
+    font-display: swap;
+  }
+
+  /* 只套用在「詠唱詞」的特效（新增） */
+  .incantation-label {
+    font-family: 'SAOUITT-Regular', 'CircleFont', 'Noto Sans JP', serif;
+    color: #ff3030; /* 鮮紅色本體 */
+    display: inline-block;
+    letter-spacing: 0.5px;
+    /* 紅色內光與黑色外暈 */
+    text-shadow:
+      0 0 2px  #ff3a3a,
+      0 0 6px  #ff3a3a,
+      0 0 12px #ff3a3a,
+      0 0 1px  rgba(0,0,0,0.95),
+      0 0 3px  rgba(0,0,0,0.9),
+      0 0 7px  rgba(0,0,0,0.85),
+      0 0 12px rgba(0,0,0,0.75);
+    animation: flame-flicker 1.8s ease-in-out infinite alternate,
+               flame-wobble 2.4s ease-in-out infinite;
+    will-change: transform, text-shadow;
+  }
+
+  /* 光暈強度微幅變化，模擬火焰閃爍（新增） */
+  @keyframes flame-flicker {
+    0% {
+      text-shadow:
+        0 0 2px  #ff3a3a,
+        0 0 6px  #ff3a3a,
+        0 0 10px #ff3a3a,
+        0 0 1px  rgba(0,0,0,0.95),
+        0 0 3px  rgba(0,0,0,0.9),
+        0 0 6px  rgba(0,0,0,0.85),
+        0 0 10px rgba(0,0,0,0.75);
+    }
+    50% {
+      text-shadow:
+        0 0 3px  #ff4040,
+        0 0 8px  #ff4040,
+        0 0 14px #ff4040,
+        0 0 1px  rgba(0,0,0,0.95),
+        0 0 4px  rgba(0,0,0,0.9),
+        0 0 8px  rgba(0,0,0,0.85),
+        0 0 14px rgba(0,0,0,0.75);
+    }
+    100% {
+      text-shadow:
+        0 0 2px  #ff2e2e,
+        0 0 7px  #ff2e2e,
+        0 0 12px #ff2e2e,
+        0 0 1px  rgba(0,0,0,0.95),
+        0 0 3px  rgba(0,0,0,0.9),
+        0 0 7px  rgba(0,0,0,0.85),
+        0 0 12px rgba(0,0,0,0.75);
+    }
+  }
+
+  /* 輕微晃動，模擬火焰搖曳（新增） */
+  @keyframes flame-wobble {
+    0%   { transform: translate(0px, 0px) rotate(0deg); }
+    50%  { transform: translate(0.6px, -1px) rotate(-0.25deg); }
+    100% { transform: translate(-0.6px, 1px) rotate(0.25deg); }
+  }
+
+  /* 減少動態偏好時關閉動畫（可有可無，新增） */
+  @media (prefers-reduced-motion: reduce) {
+    .incantation-label { animation: none; }
+  }
 </style>
 
 </head>
@@ -126,16 +199,18 @@
   <!-- ---------------------------------------------- -->
   <div class="row hw12">
     <div class="col-md-6 twenty">
-      <img class="withborder" src="./KayabaAkihiko_20251001_2345.png" height="360"> 
+      <img class="withborder" src="./KayabaAkihiko_20251001_2345.png" height="384"> 
     </div>
     <div class="col-md-6 twenty">
       詠唱詞: 
+      <span class="incantation-label">
 Please generate a Japanese anime-style scene with the following details: 
 - The scene is in a futuristic computer graphics laboratory.
 - In the laboratory, a 22-year-old professor was introducing the class. (No students in the generated image.)
 - The professor is Kayaba Akihiko, a thin, Japanese male professor wearing a white lab coat; please search his appearance before generating the image.
 - He has white eyes with bright and glowing red irises (no glasses), fair skin, and brownish-black hair.
 - He had turned slightly sideways, had a poker face and both hands in his white lab coat.
+      </span>
     </div>
   </div>
 
@@ -171,3 +246,4 @@ Please generate a Japanese anime-style scene with the following details:
 </body>
 
 </html>
+
